@@ -5,7 +5,6 @@
   "description": "Premium volume booster with liquid glass UI. Boost audio up to 600% with per-tab control.",
   "permissions": [
     "activeTab",
-    "tabCapture",
     "storage"
   ],
   "host_permissions": [
