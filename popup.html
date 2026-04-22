@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volume Booster Pro</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Ambient glow effects -->
+    <div class="ambient ambient-1"></div>
+    <div class="ambient ambient-2"></div>
+
+    <!-- Header -->
+    <header class="glass-header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+        <span class="logo-text">Volume Pro</span>
+      </div>
+      <div class="tab-indicator" id="tabIndicator">
+        <span class="tab-dot"></span>
+        <span class="tab-label" id="tabLabel">This Tab</span>
+      </div>
+    </header>
+
+    <!-- Main Volume Display -->
+    <section class="volume-section">
+      <div class="volume-ring-container">
+        <div class="volume-ring" id="volumeRing">
+          <svg class="progress-ring" viewBox="0 0 200 200">
+            <defs>
+              <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1" />
+                <stop offset="50%" style="stop-color:#60a5fa;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#34d399;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <circle class="ring-bg" cx="100" cy="100" r="82"></circle>
+            <circle class="ring-progress" cx="100" cy="100" r="82" id="ringProgress"></circle>
+          </svg>
+          <div class="volume-value-wrap">
+            <span class="volume-value" id="volumeValue">100</span>
+            <span class="volume-unit">%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Volume Slider -->
+      <div class="slider-container">
+        <div class="slider-track-wrap">
+          <div class="slider-glow" id="sliderGlow"></div>
+          <input type="range" class="slider" id="volumeSlider" min="0" max="600" value="100" step="5">
+          <div class="slider-fill" id="sliderFill"></div>
+        </div>
+        <div class="slider-labels">
+          <span>0%</span>
+          <span id="midLabel">300%</span>
+          <span>600%</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Presets -->
+    <section class="presets-section">
+      <div class="section-title">Quick Presets</div>
+      <div class="presets-grid">
+        <button class="preset-btn glass-btn" data-value="0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          </svg>
+          <span>Mute</span>
+        </button>
+        <button class="preset-btn glass-btn active" data-value="100">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          </svg>
+          <span>Normal</span>
+        </button>
+        <button class="preset-btn glass-btn boost" data-value="200">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <span>Boost</span>
+        </button>
+        <button class="preset-btn glass-btn super-boost" data-value="400">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <span>Max</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Active Tab Info -->
+    <section class="tab-info glass-panel" id="tabInfo">
+      <div class="tab-favicon-wrap">
+        <img class="tab-favicon" id="tabFavicon" src="" alt="">
+        <div class="tab-favicon-fallback" id="tabFaviconFallback">🌐</div>
+      </div>
+      <div class="tab-details">
+        <div class="tab-title" id="tabTitle">Loading...</div>
+        <div class="tab-domain" id="tabDomain">—</div>
+      </div>
+      <div class="tab-volume-badge" id="tabBadge">100%</div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <button class="reset-btn" id="resetBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"></polyline>
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+        </svg>
+        Reset All
+      </button>
+      <div class="keyboard-hint">
+        <kbd>↑</kbd><kbd>↓</kbd> adjust
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
