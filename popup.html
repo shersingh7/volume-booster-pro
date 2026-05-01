@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Volume Booster Pro</title>
+  <!-- Non-blocking font load -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all';this.onload=null">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -41,7 +46,7 @@
               </linearGradient>
             </defs>
             <circle class="ring-bg" cx="100" cy="100" r="82"></circle>
-            <circle class="ring-progress" cx="100" cy="100" r="82" id="ringProgress"></circle>
+            <circle class="ring-progress glow-blue" cx="100" cy="100" r="82" id="ringProgress"></circle>
           </svg>
           <div class="volume-value-wrap">
             <span class="volume-value" id="volumeValue">100</span>
@@ -53,9 +58,9 @@
       <!-- Volume Slider -->
       <div class="slider-container">
         <div class="slider-track-wrap">
+          <div class="slider-fill" id="sliderFill"></div>
           <div class="slider-glow" id="sliderGlow"></div>
           <input type="range" class="slider" id="volumeSlider" min="0" max="600" value="100" step="5">
-          <div class="slider-fill" id="sliderFill"></div>
         </div>
         <div class="slider-labels">
           <span>0%</span>
@@ -103,7 +108,7 @@
     <!-- Active Tab Info -->
     <section class="tab-info glass-panel" id="tabInfo">
       <div class="tab-favicon-wrap">
-        <img class="tab-favicon" id="tabFavicon" src="" alt="">
+        <img class="tab-favicon" id="tabFavicon" src="" alt="" loading="eager">
         <div class="tab-favicon-fallback" id="tabFaviconFallback">🌐</div>
       </div>
       <div class="tab-details">
