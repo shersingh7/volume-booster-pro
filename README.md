@@ -1,68 +1,95 @@
 # Volume Booster Pro
 
-A premium Chrome extension with liquid glass UI that boosts audio up to 600% with per-tab control.
+Manifest V3 Chrome extension that boosts page media volume up to **600%** with **per-tab** control. Compact dark control surface, honest status feedback, and a lazy content script that stays idle until you actually change volume.
 
 ## Features
 
-- **Liquid Glass UI** — Frosted glass panels with ambient glows, backdrop blur, and smooth gradients
-- **0% to 600% Volume Boost** — Uses Web Audio API gain nodes for distortion-free amplification
-- **Per-Tab Control** — Each tab has its own independent volume level
-- **Quick Presets** — Mute, Normal, Boost (200%), Max (400%) with one click
-- **Keyboard Shortcuts** — Arrow Up/Down to adjust volume directly
-- **Live Ring Visualization** — Animated SVG ring shows current level
-- **Active Tab Info** — Shows favicon, title, and domain of the current tab
-- **Responsive Design** — Works smoothly at all popup sizes
+- **0%–600% volume** via Web Audio API `GainNode` on `<audio>` / `<video>` elements
+- **Per-tab levels** stored in `chrome.storage.local` (cleared when the tab closes)
+- **Presets:** Mute 0%, Normal 100%, Boost 200%, Loud 400%, Max 600%
+- **Status pill:** Ready, waiting for gesture, no media, unavailable, or error
+- **High-boost warning** above 300% (clipping / distortion risk)
+- **Keyboard:** ↑ / ↓ adjusts by 5% when focus is not on the range input
+- **Efficient idle path:** no polling, no boot-time `AudioContext`, top frame only
 
 ## Install (Developer Mode)
 
 1. Open Chrome → `chrome://extensions/`
-2. Enable **Developer mode** (toggle top-right)
+2. Enable **Developer mode**
 3. Click **Load unpacked**
-4. Select the `volume-booster-pro` folder
+4. Select this repository folder
 
-## Files
+### Packaged zip
 
-```
-volume-booster-pro/
-├── manifest.json       # Extension manifest v3
-├── popup.html          # Main popup UI
-├── popup.css           # Liquid glass styles
-├── popup.js            # Popup logic & chrome APIs
-├── content.js          # Injected page script (Web Audio API)
-├── background.js       # Service worker
-├── icons/              # Extension icons
-│   ├── icon16.png
-│   ├── icon32.png
-│   ├── icon48.png
-│   └── icon128.png
-└── README.md
+```bash
+npm run package
 ```
 
-## How It Works
+Loads `dist-volume-booster-pro.zip` contents (or unzip and load the folder). Does not overwrite any pre-existing `volume-booster-pro.zip`.
 
-The extension uses the **Web Audio API** to create a `GainNode` that intercepts audio/video element sources. This allows boosting volume beyond the browser's 100% limit without clipping, unlike simple `element.volume` manipulation.
+## Development checks
 
-### Architecture
+Requires Node 18+.
+
+```bash
+npm test          # pure volume utility tests
+npm run check     # manifest + JS syntax + efficiency guards
+npm run package   # runtime-only zip at repo root
+```
+
+## How it works
 
 ```
-Popup (UI Layer)
-  ↓ chrome.tabs.sendMessage
-Content Script (Page Layer)
-  ↓ Web Audio API
-GainNode → AudioDestination
+Popup (UI)
+  → chrome.tabs.sendMessage
+Content script (top frame, lazy)
+  → Web Audio API GainNode → destination
 ```
+
+1. Content script registers a message listener only at load.
+2. On first `setVolume`, it creates an `AudioContext`, hooks existing media once, and starts a `MutationObserver` for added nodes only.
+3. At 100% (normal), discovery work is stopped when safe; already-routed elements keep their graph so playback stays correct.
+4. Suspended contexts install temporary gesture listeners until `resume()` succeeds.
+
+### Architecture limits (honest)
+
+| Situation | Behavior |
+|---|---|
+| Gain &gt; 1.0 | Can **clip / distort**; not “distortion-free” |
+| DRM media (e.g. some Netflix / Spotify Web paths) | Often **cannot** be hooked |
+| Cross-origin media without CORS | `createMediaElementSource` may fail; status reports limited control |
+| Restricted pages (`chrome://`, Web Store, …) | Popup shows **Unavailable**; controls disabled |
+| Autoplay / suspended `AudioContext` | May need a **click on the page** first |
+| Iframes | Top frame only (avoids multi-graph / multi-observer cost) |
 
 ## Permissions
 
-- `activeTab` — Access current tab for volume control
-- `storage` — Persist per-tab volume levels
-- `<all_urls>` — Inject content script on all websites
+| Permission | Why |
+|---|---|
+| `activeTab` | Identify the active tab for messaging and UI |
+| `storage` | Remember per-tab volume locally |
+| `<all_urls>` host permission | Inject the content script on arbitrary sites with media — core product function |
 
-## Notes
+No analytics, remote code, or network calls from the extension UI (local system fonts only).
 
-- Some sites (Spotify Web, Netflix) use DRM-protected audio that cannot be intercepted
-- First user interaction (click/keypress) may be required to unlock AudioContext (browser policy)
-- Boosting beyond 300% may cause distortion on low-quality audio sources
+## Project layout
+
+```
+├── manifest.json
+├── popup.html / popup.css / popup.js
+├── volume-utils.js      # shared pure helpers (popup + tests)
+├── content.js           # lazy audio controller
+├── background.js        # badge + storage cleanup
+├── icons/
+├── tests/
+├── scripts/check.js
+├── scripts/package.js
+└── package.json
+```
+
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md). Volume preferences stay on-device; nothing is transmitted.
 
 ## License
 

@@ -1,0 +1,14 @@
+{
+  "name": "volume-booster-pro",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Manifest V3 Chrome extension — per-tab volume boost via Web Audio API",
+  "scripts": {
+    "test": "node --test tests/volume-utils.test.js",
+    "check": "node scripts/check.js",
+    "package": "node scripts/package.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

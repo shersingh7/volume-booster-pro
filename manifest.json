@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Volume Booster Pro",
-  "version": "1.0.0",
-  "description": "Premium volume booster with liquid glass UI. Boost audio up to 600% with per-tab control.",
+  "version": "1.1.0",
+  "description": "Per-tab volume boost up to 600% with a compact dark control surface. Uses the Web Audio API on page media elements.",
   "permissions": [
     "activeTab",
     "storage"
@@ -12,6 +12,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
+    "default_title": "Volume Booster Pro",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -26,8 +27,8 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_start",
-      "all_frames": true
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
   "icons": {

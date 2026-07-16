@@ -1,0 +1,10 @@
+.DS_Store
+**/.DS_Store
+*.zip
+dist-volume-booster-pro.zip
+node_modules/
+.vscode/
+.idea/
+*.log
+.chrome-test-profile/
+tests/fixtures/popup-review.png

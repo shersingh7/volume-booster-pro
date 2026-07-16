@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Volume Booster Pro — Media Fixture</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+    button { margin: 0.5rem 0.5rem 0.5rem 0; padding: 0.5rem 0.75rem; }
+    video, audio { display: block; width: 100%; max-width: 480px; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Media fixture</h1>
+  <p>Local page for manual extension acceptance. Uses short silent/public sample URLs when available.</p>
+
+  <audio id="a1" controls preload="metadata"
+    src="https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3"></audio>
+
+  <video id="v1" controls preload="metadata" width="480"
+    src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"></video>
+
+  <div>
+    <button type="button" id="insertAudio">Insert dynamic audio</button>
+    <button type="button" id="insertVideo">Insert dynamic video</button>
+  </div>
+  <div id="dynamic"></div>
+
+  <script>
+    document.getElementById('insertAudio').addEventListener('click', () => {
+      const el = document.createElement('audio');
+      el.controls = true;
+      el.src = 'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3';
+      document.getElementById('dynamic').appendChild(el);
+    });
+    document.getElementById('insertVideo').addEventListener('click', () => {
+      const el = document.createElement('video');
+      el.controls = true;
+      el.width = 320;
+      el.src = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+      document.getElementById('dynamic').appendChild(el);
+    });
+  </script>
+</body>
+</html>
