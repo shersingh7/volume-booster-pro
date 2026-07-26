@@ -11,6 +11,8 @@
   const trackedMedia = new Set();
   /** Elements we failed to hook (cross-origin / already connected / DRM) */
   const failedElements = new WeakSet();
+  /** Elements waiting for AudioContext to resume before hooking */
+  const pendingHookElements = new Set();
 
   let currentGain = 1.0;
   let controllerReady = false;
@@ -98,6 +100,17 @@
     }
     if (!initAudioGraph() || !audioContext || !gainNode) return false;
 
+    // If the AudioContext is suspended, defer hooking until a user gesture resumes it.
+    if (audioContext.state === 'suspended') {
+      if (!pendingHookElements.has(el)) {
+        pendingHookElements.add(el);
+        audioContext.resume().catch(() => {
+          /* resume failed: element stays pending until a real user gesture */
+        });
+      }
+      return false;
+    }
+
     ensureNativeVolumeSnapshot(el);
 
     try {
@@ -108,12 +121,38 @@
       applyElementVolume(el, currentGain, true);
       return true;
     } catch (e) {
+      // Fallback: try to capture the media element's own stream and route it.
+      try {
+        const capture =
+          typeof el.captureStream === 'function'
+            ? el.captureStream()
+            : typeof el.mozCaptureStream === 'function'
+              ? el.mozCaptureStream()
+              : null;
+        if (capture && audioContext) {
+          const streamSrc = audioContext.createMediaStreamSource(capture);
+          streamSrc.connect(gainNode);
+          hookedElements.add(el);
+          trackedMedia.add(el);
+          applyElementVolume(el, currentGain, true);
+          return true;
+        }
+      } catch (_) {
+        /* captureStream fallback also failed */
+      }
+
       failedElements.add(el);
       trackedMedia.add(el);
       lastHookError =
         (e && e.message) ||
         'Could not route media element (already connected, cross-origin, or DRM).';
       applyElementVolume(el, currentGain, false);
+      // Ensure native volume is at maximum so the user at least gets full native loudness.
+      try {
+        el.volume = 1.0;
+      } catch (_) {
+        /* some elements throw on volume set */
+      }
       return false;
     }
   }
@@ -195,12 +234,21 @@
       audioContext.resume().then(() => {
         if (audioContext && audioContext.state === 'running') {
           removeResumeListeners();
+          // Process any elements that were waiting for the context to start.
+          for (const el of pendingHookElements) {
+            hijackElement(el);
+          }
+          pendingHookElements.clear();
         }
       }).catch(() => {
         /* keep listeners */
       });
     } else if (audioContext.state === 'running') {
       removeResumeListeners();
+      for (const el of pendingHookElements) {
+        hijackElement(el);
+      }
+      pendingHookElements.clear();
     }
   }
 
@@ -249,10 +297,11 @@
     pruneTrackedMedia();
     const all = document.querySelectorAll('audio, video');
     all.forEach((el) => {
-      const isHooked = hookedElements.has(el);
-      if (!isHooked && !failedElements.has(el)) {
+      if (!hookedElements.has(el) && !failedElements.has(el)) {
         hijackElement(el);
       }
+      // If the element is pending (context suspended), ensure it will receive the
+      // current gain once the context resumes and hijackElement succeeds.
       applyElementVolume(el, gain, hookedElements.has(el));
     });
   }

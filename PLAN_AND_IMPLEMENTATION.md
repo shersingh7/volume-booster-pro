@@ -471,3 +471,101 @@ git status --short
 - `shouldReapplyOnOpen(200, idle) === true` and `shouldReapplyOnOpen(0, idle) === true`
 - `computeFallbackElementVolume(*, 0) === 0` for gains 0, 0.5, 1, 2
 - `isApplySuccess(null) === false`, `isApplySuccess({ ok: false }) === false`, `isApplySuccess({ ok: true }) === true`
+
+---
+
+## 8. Popup UI rewrite — studio-rack control panel (2026-07-16)
+
+### Why the previous UI was discarded
+
+The prior popup was a generic dark SaaS card: navy surfaces, blue/violet gradients, a decorative circular progress ring, pill status chrome, and soft rounded “dashboard” cards. It read as AI-default template UI rather than a deliberate instrument. Hierarchy put ornament (the ring) ahead of the actual control surface, and the palette (cool blue + purple boost bands) reinforced that generic SaaS look. Polishing that layout would not have fixed the product feel.
+
+### New visual architecture
+
+Rebuilt from scratch as a **tactile hi-fi / studio-rack control panel** inspired by Braun industrial design and analog broadcast gear:
+
+| Layer | Treatment |
+| --- | --- |
+| Chassis | Warm bone / off-white aluminum-like shell, hard edges (2–4px radii), CSS-only grain/scan texture, corner screw marks |
+| Header | Condensed brand mark + dual LED cluster (power / signal) with state-driven green / amber / red |
+| LCD zone | Near-black bezel + dominant tabular percentage readout; horizontal LCD meter (no circular ring) |
+| Fader | Large tactile horizontal range control with channel groove, unity notch at 100%, capstan-style thumb |
+| Preset bank | Five hardware-style memory switches (MUTE / NORM / BOOST / LOUD / MAX) with latched LED caps |
+| Tab strip | Compact channel strip: favicon, title, domain, “CH” label |
+| Caution | Amber/red hardware caution strip for high boost (not a soft alert card) |
+| Footer | Quiet text utility reset + keyboard hint |
+
+**Palette:** chassis bone, near-black LCD, fluorescent signal orange accent, tiny green/red LEDs. No glassmorphism, no blue/purple gradients, no floating cards, no pill-heavy dashboard, no remote fonts/CDNs.
+
+**State hooks:** `data-state` (loading / ready / waiting / no-media / unavailable / error) and `data-band` (mute / normal / boost / high / max) drive LEDs, LCD color, meter fill, and switch engagement. High contrast, visible focus, ≥40px targets, `prefers-reduced-motion` honored.
+
+**Geometry:** popup fixed at **380×540px**, `overflow: hidden`, no body scroll. Designed to fit Chrome’s popup chrome without clipping.
+
+### Behavior preserved
+
+All prior popup protocol remains: per-tab 0–600%, presets, status classification, restricted-page disable, success-only storage/badge, keyboard arrows, mute-0 storage, high-boost warning, lazy reapply via `shouldReapplyOnOpen`. Content/background scripts untouched.
+
+### Files touched this pass
+
+- `popup.html` — full rewrite (rack structure; ring markup removed)
+- `popup.css` — full rewrite (studio-rack tokens + tactile controls)
+- `popup.js` — remove `ringProgress` / `RING_C`; dual fill (LCD bar + fader channel); band label
+- `scripts/check.js` — guards: no ring refs, 380px width, no glassmorphism, data-state/band hooks
+- `PLAN_AND_IMPLEMENTATION.md` — this section
+
+### Verification (this pass)
+
+```text
+npm test
+npm run check
+npm run package
+git diff --check
+# plus static confirm: 380px width, no body scroll, no external assets, no ringProgress/RING_C
+```
+
+---
+
+## 9. Chrome Web Store asset kit — Signal Chassis (2026-07-16)
+
+### Why
+
+The rebuilt studio-rack popup (warm bone chassis, near-black LCD, fluorescent signal orange) made prior store icons, screenshots, and promo tiles obsolete. Store listing assets must match the product surface and remain deterministically regenerable.
+
+### Visual movement
+
+**Signal Chassis** (see `store-assets/DESIGN_PHILOSOPHY.md`): warm industrial material language, analog measurement precision, deliberate space, three-note palette (bone / charcoal / signal orange), sparse truthful typography, bold silhouettes for Chrome icon crops.
+
+### Generator
+
+`scripts/generate-store-assets.py` (Pillow + Playwright):
+
+1. Draws original abstract speaker/fader logo master (1024²) and downscales store + runtime icons (128 / 16 / 32 / 48 / 128).
+2. Renders the **real** `popup.html` + CSS + JS at 380×540 via Playwright with a deterministic mock `chrome` API (ready status, YouTube-like tab, saved volume 100 / 200 / 600).
+3. Composes each capture into a 1280×800 marketing canvas (editorial product-photo language; three distinct layouts; no remote assets/fonts).
+4. Builds optional promo tile 440×280.
+5. Validates dimensions, modes, and non-zero files; programmatically checks 16px silhouette (bone + dark + orange present).
+
+### Outputs
+
+| Path | Size |
+| --- | --- |
+| `store-assets/DESIGN_PHILOSOPHY.md` | — |
+| `store-assets/logo-master-1024.png` | 1024×1024 |
+| `store-assets/store-icon-128.png` | 128×128 |
+| `store-assets/screenshot-01-control-1280x800.png` | 1280×800 @ 100% ready |
+| `store-assets/screenshot-02-boost-1280x800.png` | 1280×800 @ 200% ready |
+| `store-assets/screenshot-03-max-1280x800.png` | 1280×800 @ 600% ready + caution |
+| `store-assets/promo-tile-440x280.png` | 440×280 |
+| `icons/icon{16,32,48,128}.png` | runtime icons from same master |
+
+### Manifest
+
+Description no longer says “compact dark control surface”; it names the tactile studio-rack control panel.
+
+### Regenerate
+
+```bash
+# once: python3 -m venv .venv-assets && .venv-assets/bin/pip install pillow playwright
+#       .venv-assets/bin/playwright install chromium
+.venv-assets/bin/python scripts/generate-store-assets.py
+```

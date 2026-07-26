@@ -6,13 +6,20 @@
     throw new Error('VolumeUtils failed to load');
   }
 
-  const RING_C = 2 * Math.PI * 32;
+  const BAND_LABELS = {
+    mute: 'MUTE',
+    normal: 'NORMAL',
+    boost: 'BOOST',
+    high: 'HIGH',
+    max: 'MAX'
+  };
 
   const app = document.getElementById('app');
   const volumeSlider = document.getElementById('volumeSlider');
   const volumeValue = document.getElementById('volumeValue');
-  const ringProgress = document.getElementById('ringProgress');
   const sliderFill = document.getElementById('sliderFill');
+  const faderChannelFill = document.getElementById('faderChannelFill');
+  const bandLabel = document.getElementById('bandLabel');
   const presetBtns = Array.from(document.querySelectorAll('.preset-btn'));
   const tabTitle = document.getElementById('tabTitle');
   const tabDomain = document.getElementById('tabDomain');
@@ -59,12 +66,15 @@
     volumeValue.textContent = String(v);
 
     const fraction = VU.percentToSliderFraction(v);
-    sliderFill.style.transform = 'scaleX(' + fraction + ')';
+    const scale = 'scaleX(' + fraction + ')';
+    if (sliderFill) sliderFill.style.transform = scale;
+    if (faderChannelFill) faderChannelFill.style.transform = scale;
 
-    const offset = RING_C * (1 - fraction);
-    ringProgress.style.strokeDashoffset = String(offset);
-
-    app.dataset.band = VU.getVolumeBand(v);
+    const band = VU.getVolumeBand(v);
+    app.dataset.band = band;
+    if (bandLabel) {
+      bandLabel.textContent = BAND_LABELS[band] || band.toUpperCase();
+    }
 
     if (!skipSlider) {
       volumeSlider.value = String(v);

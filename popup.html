@@ -7,56 +7,68 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="app" id="app" data-state="loading" data-band="normal">
-    <div class="bg-accent" aria-hidden="true"></div>
+  <div class="chassis" id="app" data-state="loading" data-band="normal">
+    <div class="chassis-texture" aria-hidden="true"></div>
 
-    <header class="header">
-      <div class="brand">
-        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-        </svg>
-        <div class="brand-text">
-          <span class="brand-name">Volume Booster Pro</span>
-          <span class="brand-sub">Per-tab control</span>
+    <!-- Compact brand + LED status header -->
+    <header class="rack-header">
+      <div class="brand-block">
+        <span class="brand-mark" aria-hidden="true">VBP</span>
+        <div class="brand-lines">
+          <span class="brand-name">VOLUME BOOSTER</span>
+          <span class="brand-sub">PRO · PER-TAB GAIN</span>
         </div>
       </div>
       <div
-        class="status-pill"
+        class="led-status"
         id="statusPill"
         role="status"
         aria-live="polite"
         aria-atomic="true"
       >
-        <span class="status-dot" aria-hidden="true"></span>
-        <span class="status-label" id="statusLabel">Loading</span>
+        <span class="led-cluster" aria-hidden="true">
+          <span class="led led-pwr"></span>
+          <span class="led led-sig"></span>
+        </span>
+        <span class="led-label" id="statusLabel">Loading</span>
       </div>
     </header>
 
-    <main class="main">
-      <section class="meter-section" aria-labelledby="volumeReadout">
-        <div class="meter-row">
-          <div class="readout" id="volumeReadout">
-            <span class="readout-value" id="volumeValue">100</span>
-            <span class="readout-unit" aria-hidden="true">%</span>
-          </div>
-          <div class="meter-ring" aria-hidden="true">
-            <svg class="meter-svg" viewBox="0 0 80 80">
-              <circle class="meter-track" cx="40" cy="40" r="32"></circle>
-              <circle class="meter-progress" id="ringProgress" cx="40" cy="40" r="32"></circle>
-            </svg>
+    <main class="rack-main">
+      <!-- Dominant LCD readout + fader -->
+      <section class="lcd-module" aria-labelledby="volumeReadout">
+        <div class="lcd-bezel">
+          <div class="lcd-screen">
+            <div class="lcd-toprow">
+              <span class="lcd-tag">OUTPUT</span>
+              <span class="lcd-band" id="bandLabel" aria-hidden="true">NORMAL</span>
+            </div>
+            <div class="readout" id="volumeReadout">
+              <span class="readout-value" id="volumeValue">100</span>
+              <span class="readout-unit" aria-hidden="true">%</span>
+            </div>
+            <div class="lcd-meter" aria-hidden="true">
+              <div class="lcd-meter-fill" id="sliderFill"></div>
+              <div class="lcd-meter-tick" style="left: 16.666%"></div>
+            </div>
           </div>
         </div>
 
-        <div class="slider-block">
-          <label class="slider-label" for="volumeSlider">Volume level</label>
-          <div class="slider-track-wrap">
-            <div class="slider-fill" id="sliderFill" aria-hidden="true"></div>
-            <div class="slider-marker" style="left: 16.666%" title="100%" aria-hidden="true"></div>
+        <div class="fader-block">
+          <div class="fader-rail-labels" aria-hidden="true">
+            <span>0</span>
+            <span class="fader-normal-mark">100</span>
+            <span>600</span>
+          </div>
+          <label class="fader-label" for="volumeSlider">Volume level</label>
+          <div class="fader-track-wrap">
+            <div class="fader-channel" aria-hidden="true">
+              <div class="fader-channel-fill" id="faderChannelFill"></div>
+              <div class="fader-notch" style="left: 16.666%" title="100%"></div>
+            </div>
             <input
               type="range"
-              class="slider"
+              class="fader"
               id="volumeSlider"
               min="0"
               max="600"
@@ -69,69 +81,60 @@
               aria-describedby="statusDetail highBoostWarning"
             >
           </div>
-          <div class="slider-scale" aria-hidden="true">
-            <span>0%</span>
-            <span class="scale-normal">100%</span>
-            <span>600%</span>
+          <div class="fader-scale" aria-hidden="true">
+            <span>MUTE</span>
+            <span class="scale-normal">UNITY</span>
+            <span>MAX</span>
           </div>
         </div>
 
         <p class="status-detail" id="statusDetail">Checking this tab…</p>
 
-        <div class="high-boost-warning" id="highBoostWarning" hidden>
-          High boost may distort audio. Lower the level if you hear clipping.
+        <div class="caution-strip" id="highBoostWarning" hidden>
+          <span class="caution-mark" aria-hidden="true">!</span>
+          <span class="caution-text">High boost may distort audio. Lower the level if you hear clipping.</span>
         </div>
       </section>
 
-      <section class="presets-section" aria-label="Quick presets">
-        <h2 class="section-heading">Presets</h2>
-        <div class="presets-grid" role="group" aria-label="Volume presets">
+      <!-- Preset bank — hardware switch row -->
+      <section class="preset-bank" aria-label="Quick presets">
+        <div class="module-label-row">
+          <h2 class="module-label">PRESET BANK</h2>
+          <span class="module-label-aux" aria-hidden="true">MEMORY</span>
+        </div>
+        <div class="preset-switches" role="group" aria-label="Volume presets">
           <button type="button" class="preset-btn" data-value="0" aria-pressed="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <line x1="1" y1="1" x2="23" y2="23"></line>
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            </svg>
-            <span class="preset-name">Mute</span>
-            <span class="preset-value">0%</span>
+            <span class="switch-cap" aria-hidden="true"></span>
+            <span class="preset-name">MUTE</span>
+            <span class="preset-value">0</span>
           </button>
           <button type="button" class="preset-btn" data-value="100" aria-pressed="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            </svg>
-            <span class="preset-name">Normal</span>
-            <span class="preset-value">100%</span>
+            <span class="switch-cap" aria-hidden="true"></span>
+            <span class="preset-name">NORM</span>
+            <span class="preset-value">100</span>
           </button>
           <button type="button" class="preset-btn" data-value="200" aria-pressed="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            </svg>
-            <span class="preset-name">Boost</span>
-            <span class="preset-value">200%</span>
+            <span class="switch-cap" aria-hidden="true"></span>
+            <span class="preset-name">BOOST</span>
+            <span class="preset-value">200</span>
           </button>
           <button type="button" class="preset-btn" data-value="400" aria-pressed="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-            <span class="preset-name">Loud</span>
-            <span class="preset-value">400%</span>
+            <span class="switch-cap" aria-hidden="true"></span>
+            <span class="preset-name">LOUD</span>
+            <span class="preset-value">400</span>
           </button>
           <button type="button" class="preset-btn preset-max" data-value="600" aria-pressed="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-            <span class="preset-name">Max</span>
-            <span class="preset-value">600%</span>
+            <span class="switch-cap" aria-hidden="true"></span>
+            <span class="preset-name">MAX</span>
+            <span class="preset-value">600</span>
           </button>
         </div>
       </section>
 
-      <section class="tab-card" aria-label="Active tab">
+      <!-- Compact active-tab strip -->
+      <section class="tab-strip" aria-label="Active tab">
         <div class="tab-favicon-wrap">
-          <img class="tab-favicon" id="tabFavicon" alt="" width="32" height="32" hidden>
+          <img class="tab-favicon" id="tabFavicon" alt="" width="28" height="28" hidden>
           <div class="tab-favicon-fallback" id="tabFaviconFallback" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
               <circle cx="12" cy="12" r="10"></circle>
@@ -144,20 +147,17 @@
           <div class="tab-title" id="tabTitle">Loading…</div>
           <div class="tab-domain" id="tabDomain">—</div>
         </div>
+        <span class="tab-ch" aria-hidden="true">CH</span>
       </section>
     </main>
 
-    <footer class="footer">
+    <footer class="rack-footer">
       <button type="button" class="reset-btn" id="resetBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <polyline points="1 4 1 10 7 10"></polyline>
-          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-        </svg>
         Reset this tab
       </button>
       <p class="keyboard-hint" id="keyboardHint">
         <kbd aria-hidden="true">↑</kbd><kbd aria-hidden="true">↓</kbd>
-        <span>adjust when focused</span>
+        <span>adjust</span>
       </p>
     </footer>
   </div>

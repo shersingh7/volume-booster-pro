@@ -3,8 +3,10 @@
 *.zip
 dist-volume-booster-pro.zip
 node_modules/
+.venv-assets/
 .vscode/
 .idea/
 *.log
 .chrome-test-profile/
 tests/fixtures/popup-review.png
+store-assets/.captures/

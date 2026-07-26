@@ -122,6 +122,12 @@ if (!/isApplySuccess/.test(popupSrc)) {
 } else {
   ok('popup.js guards flushes with isApplySuccess');
 }
+// Studio-rack UI: circular ring meter must stay gone
+if (/\bringProgress\b|\bRING_C\b/.test(popupSrc)) {
+  fail('popup.js must not reference ringProgress or RING_C (ring meter removed)');
+} else {
+  ok('popup.js has no ringProgress/RING_C');
+}
 
 // Ensure popup does not load remote fonts
 const cssPath = path.join(root, 'popup.css');
@@ -131,6 +137,16 @@ if (fs.existsSync(cssPath)) {
     fail('popup.css must not load remote fonts');
   } else {
     ok('popup.css has no remote font import');
+  }
+  if (!/width:\s*380px/.test(css)) {
+    fail('popup.css must target 380px popup width');
+  } else {
+    ok('popup.css sets 380px width');
+  }
+  if (/glassmorphism|backdrop-filter/i.test(css)) {
+    fail('popup.css must not use glassmorphism/backdrop-filter');
+  } else {
+    ok('popup.css has no glassmorphism');
   }
 }
 
@@ -149,6 +165,16 @@ if (fs.existsSync(htmlPath)) {
     fail('popup.html must not reference remote scripts/fonts');
   } else {
     ok('popup.html has no remote assets');
+  }
+  if (/\bringProgress\b|meter-ring|meter-progress/i.test(html)) {
+    fail('popup.html must not include circular ring meter markup');
+  } else {
+    ok('popup.html has no ring meter markup');
+  }
+  if (!/data-state|data-band/.test(html)) {
+    fail('popup.html root must expose data-state/data-band hooks');
+  } else {
+    ok('popup.html has data-state/data-band hooks');
   }
 }
 
