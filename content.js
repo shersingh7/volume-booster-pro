@@ -160,15 +160,32 @@
   function scanAddedNode(node) {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
     if (node.tagName === 'AUDIO' || node.tagName === 'VIDEO') {
-      hijackElement(node);
+      trackedMedia.add(node);
+      if (controllerReady) {
+        hijackElement(node);
+      }
     }
     if (typeof node.querySelectorAll === 'function') {
-      node.querySelectorAll('audio, video').forEach((el) => hijackElement(el));
+      node.querySelectorAll('audio, video').forEach((el) => {
+        trackedMedia.add(el);
+        if (controllerReady) {
+          hijackElement(el);
+        }
+      });
     }
   }
 
   function scanExistingMedia() {
-    document.querySelectorAll('audio, video').forEach((el) => hijackElement(el));
+    document.querySelectorAll('audio, video').forEach((el) => {
+      trackedMedia.add(el);
+    });
+    if (controllerReady) {
+      trackedMedia.forEach((el) => {
+        if (el.isConnected) {
+          hijackElement(el);
+        }
+      });
+    }
   }
 
   function pruneTrackedMedia() {
@@ -180,17 +197,16 @@
   }
 
   function countMedia() {
+    scanExistingMedia();
     pruneTrackedMedia();
-    // Prefer live DOM counts for status honesty
-    const all = document.querySelectorAll('audio, video');
     let hooked = 0;
     let failed = 0;
-    all.forEach((el) => {
+    trackedMedia.forEach((el) => {
       if (hookedElements.has(el)) hooked += 1;
       else if (failedElements.has(el)) failed += 1;
     });
     return {
-      mediaCount: all.length,
+      mediaCount: trackedMedia.size,
       hookedCount: hooked,
       failedCount: failed
     };
@@ -276,7 +292,6 @@
     const ok = initAudioGraph();
     if (ok) {
       scanExistingMedia();
-      startObserver();
       installResumeListenersIfNeeded();
     }
     return ok;
@@ -297,6 +312,7 @@
     pruneTrackedMedia();
     const all = document.querySelectorAll('audio, video');
     all.forEach((el) => {
+      trackedMedia.add(el);
       if (!hookedElements.has(el) && !failedElements.has(el)) {
         hijackElement(el);
       }
@@ -333,8 +349,6 @@
    */
   function maybeIdleAtUnity() {
     if (currentGain !== 1) return;
-    // Stop observing for new media; already-routed elements keep their graph.
-    stopObserver();
     removeResumeListeners();
   }
 
@@ -372,11 +386,6 @@
     if (gain === 1) {
       maybeIdleAtUnity();
     } else {
-      // Boosting again: ensure we discover new media
-      if (!mediaObserver) {
-        scanExistingMedia();
-        startObserver();
-      }
       installResumeListenersIfNeeded();
     }
 
@@ -387,7 +396,9 @@
     // Status probe must not create AudioContext. Report whether the controller
     // already started so the popup can stay lazy at default 100%.
     if (!controllerReady) {
-      const mediaCount = document.querySelectorAll('audio, video').length;
+      scanExistingMedia();
+      pruneTrackedMedia();
+      const mediaCount = trackedMedia.size;
       return {
         ok: true,
         started: false,
@@ -432,5 +443,9 @@
     return false;
   });
 
-  // Boot: message listener only — no AudioContext, no scan, no observer, no timers.
+  // Boot: start tracking observer and scan existing media.
+  // AudioContext creation remains lazy until first setVolume.
+  scanExistingMedia();
+  startObserver();
 })();
+

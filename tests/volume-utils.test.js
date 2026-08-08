@@ -292,3 +292,94 @@ describe('formatBadgeText / badgeColorForPercent', () => {
     assert.equal(VU.badgeColorForPercent(500), '#f87171');
   });
 });
+
+describe('aggregateFrameStatus', () => {
+  it('handles empty array or null input', () => {
+    const res = VU.aggregateFrameStatus([]);
+    assert.equal(res.ok, true);
+    assert.equal(res.started, false);
+    assert.equal(res.mediaCount, 0);
+    assert.equal(res.hookedCount, 0);
+    assert.equal(res.failedCount, 0);
+    assert.equal(res.contextState, 'none');
+    assert.equal(res.frameCount, 0);
+    assert.equal(res.code, 'NOT_STARTED');
+
+    const resNull = VU.aggregateFrameStatus(null);
+    assert.equal(resNull.ok, true);
+    assert.equal(resNull.mediaCount, 0);
+  });
+
+  it('handles a single frame response', () => {
+    const frame = {
+      ok: true,
+      started: true,
+      volume: 2,
+      contextState: 'running',
+      mediaCount: 1,
+      hookedCount: 1,
+      failedCount: 0
+    };
+    const res = VU.aggregateFrameStatus([frame]);
+    assert.equal(res.ok, true);
+    assert.equal(res.started, true);
+    assert.equal(res.volume, 2);
+    assert.equal(res.contextState, 'running');
+    assert.equal(res.mediaCount, 1);
+    assert.equal(res.hookedCount, 1);
+    assert.equal(res.failedCount, 0);
+    assert.equal(res.frameCount, 1);
+  });
+
+  it('sums counts across multiple frames', () => {
+    const frames = [
+      { ok: true, started: true, contextState: 'running', mediaCount: 2, hookedCount: 2, failedCount: 0 },
+      { ok: true, started: true, contextState: 'running', mediaCount: 3, hookedCount: 1, failedCount: 2 }
+    ];
+    const res = VU.aggregateFrameStatus(frames);
+    assert.equal(res.ok, true);
+    assert.equal(res.mediaCount, 5);
+    assert.equal(res.hookedCount, 3);
+    assert.equal(res.failedCount, 2);
+    assert.equal(res.frameCount, 2);
+  });
+
+  it('handles all-failed frames', () => {
+    const frames = [
+      { ok: false, code: 'NO_RCV', message: 'Frame 1 missing' },
+      { ok: false, code: 'NO_RCV', message: 'Frame 2 missing' }
+    ];
+    const res = VU.aggregateFrameStatus(frames);
+    assert.equal(res.ok, false);
+    assert.equal(res.code, 'NO_RCV');
+    assert.equal(res.message, 'Frame 1 missing');
+    assert.equal(res.frameCount, 2);
+  });
+
+  it('handles mixed ready / no-media frames', () => {
+    const frames = [
+      { ok: true, started: false, contextState: 'none', mediaCount: 0, hookedCount: 0, failedCount: 0 },
+      { ok: true, started: false, contextState: 'none', mediaCount: 2, hookedCount: 0, failedCount: 0 }
+    ];
+    const res = VU.aggregateFrameStatus(frames);
+    assert.equal(res.ok, true);
+    assert.equal(res.started, false);
+    assert.equal(res.mediaCount, 2);
+    assert.equal(res.contextState, 'none');
+
+    const classified = VU.classifyStatus(res);
+    assert.equal(classified.state, 'ready');
+  });
+
+  it('aggregates contextState by picking best state (running > suspended > none)', () => {
+    const f1 = { ok: true, started: true, contextState: 'suspended', mediaCount: 1, hookedCount: 1, failedCount: 0 };
+    const f2 = { ok: true, started: false, contextState: 'none', mediaCount: 1, hookedCount: 0, failedCount: 0 };
+    const res1 = VU.aggregateFrameStatus([f1, f2]);
+    assert.equal(res1.contextState, 'suspended');
+
+    const f3 = { ok: true, started: true, contextState: 'running', mediaCount: 1, hookedCount: 1, failedCount: 0 };
+    const res2 = VU.aggregateFrameStatus([f1, f2, f3]);
+    assert.equal(res2.contextState, 'running');
+  });
+});
+

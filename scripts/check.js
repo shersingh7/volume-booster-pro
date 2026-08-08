@@ -56,15 +56,21 @@ if (!manifest.background || !manifest.background.service_worker) {
   ok('service_worker: ' + manifest.background.service_worker);
 }
 
+if (!Array.isArray(manifest.permissions) || !manifest.permissions.includes('webNavigation')) {
+  fail('manifest.json permissions must include webNavigation');
+} else {
+  ok('permissions includes webNavigation');
+}
+
 const cs = manifest.content_scripts && manifest.content_scripts[0];
 if (!cs || !Array.isArray(cs.js) || !cs.js.includes('content.js')) {
   fail('content_scripts must include content.js');
 } else {
   ok('content_scripts includes content.js');
-  if (cs.all_frames === true) {
-    fail('all_frames should be false/omitted for efficiency (top frame only)');
+  if (cs.all_frames !== true) {
+    fail('all_frames must be true for multi-frame support');
   } else {
-    ok('all_frames is not permanently enabled');
+    ok('all_frames is enabled');
   }
 }
 
@@ -81,6 +87,14 @@ for (const rel of jsFiles) {
   } else {
     ok('syntax: ' + rel);
   }
+}
+
+// Check volume-utils exports aggregateFrameStatus
+const vuSrc = fs.readFileSync(path.join(root, 'volume-utils.js'), 'utf8');
+if (!/aggregateFrameStatus/.test(vuSrc)) {
+  fail('volume-utils.js must export aggregateFrameStatus');
+} else {
+  ok('volume-utils.js exports aggregateFrameStatus');
 }
 
 // Static efficiency / correctness guards on content.js
@@ -112,6 +126,11 @@ if (!/started:\s*false/.test(contentSrc) || !/started:\s*true/.test(contentSrc))
 }
 
 const popupSrc = fs.readFileSync(path.join(root, 'popup.js'), 'utf8');
+if (!/chrome\.webNavigation\.getAllFrames/.test(popupSrc)) {
+  fail('popup.js must reference chrome.webNavigation.getAllFrames');
+} else {
+  ok('popup.js references chrome.webNavigation.getAllFrames');
+}
 if (!/shouldReapplyOnOpen/.test(popupSrc)) {
   fail('popup.js must gate init apply via shouldReapplyOnOpen');
 } else {

@@ -93,6 +93,9 @@
     highBoostWarning.hidden = !VU.shouldShowHighBoostWarning(v);
   }
 
+  /** Cached frame IDs for current tab */
+  let cachedFrameIds = null;
+
   function isNoReceiverError(err) {
     const msg = err && (err.message || String(err));
     if (!msg) return false;
@@ -103,17 +106,68 @@
     );
   }
 
-  async function sendToTab(tabId, message) {
+  async function getFrameIds(tabId) {
     try {
-      const response = await chrome.tabs.sendMessage(tabId, message);
-      return { ok: true, response };
+      if (chrome.webNavigation && typeof chrome.webNavigation.getAllFrames === 'function') {
+        const frames = await chrome.webNavigation.getAllFrames({ tabId });
+        if (Array.isArray(frames) && frames.length > 0) {
+          const ids = frames.map((f) => f.frameId);
+          cachedFrameIds = ids;
+          return ids;
+        }
+      }
+    } catch (_) {
+      /* fallback to top frame */
+    }
+    cachedFrameIds = [0];
+    return [0];
+  }
+
+  async function sendToFrame(tabId, frameId, message) {
+    try {
+      const response = await chrome.tabs.sendMessage(tabId, message, { frameId });
+      return { ok: true, frameId, response };
     } catch (err) {
       return {
         ok: false,
+        frameId,
         error: err,
         noReceiver: isNoReceiverError(err)
       };
     }
+  }
+
+  async function broadcastToFrames(tabId, message) {
+    let frameIds = cachedFrameIds;
+    if (!frameIds || frameIds.length === 0) {
+      frameIds = await getFrameIds(tabId);
+    }
+    const promises = frameIds.map((frameId) => sendToFrame(tabId, frameId, message));
+    const results = await Promise.all(promises);
+
+    const anyNoReceiver = results.some((r) => !r.ok && r.noReceiver);
+    if (anyNoReceiver) {
+      getFrameIds(tabId).catch(() => {});
+    }
+
+    return results;
+  }
+
+  function formatStatusDetail(classified, aggregated) {
+    if (!classified || !aggregated) return classified ? classified.detail : '';
+    const frames = aggregated.frameCount || 1;
+    if (frames <= 1) return classified.detail;
+
+    if (classified.state === 'ready') {
+      if (aggregated.hookedCount > 0) {
+        return `Audio active in ${frames} frames on this tab.`;
+      }
+      return `Media detected in ${frames} frames. Volume control will start when you change the level.`;
+    }
+    if (classified.state === 'no-media') {
+      return `Checked ${frames} frames. Play media on this page to detect audio.`;
+    }
+    return classified.detail;
   }
 
   async function updateBadge(tabId, percent) {
@@ -158,13 +212,22 @@
     const seq = ++applySeq;
     const gain = VU.percentToGain(v);
 
-    const result = await sendToTab(tabId, { action: 'setVolume', volume: gain });
+    const results = await broadcastToFrames(tabId, { action: 'setVolume', volume: gain });
 
     // Ignore stale responses
     if (seq !== applySeq) return null;
 
-    if (!result.ok) {
-      const detail = result.noReceiver
+    const topFrameResult = results.find((r) => r.frameId === 0);
+    const validResponses = [];
+    for (const r of results) {
+      if (r.ok && r.response) {
+        validResponses.push(r.response);
+      }
+    }
+
+    if (validResponses.length === 0) {
+      const isTopNoReceiver = topFrameResult && !topFrameResult.ok && topFrameResult.noReceiver;
+      const detail = isTopNoReceiver
         ? 'Content script is not available on this page. Try reloading the tab.'
         : 'Could not reach the page. Reload the tab and try again.';
       setOperationalState('error', 'Error', detail);
@@ -175,26 +238,27 @@
       return null;
     }
 
-    const res = result.response || {};
-    if (res.ok === false) {
-      const classified = VU.classifyStatus(res);
-      setOperationalState(classified.state, classified.label, classified.detail);
+    const aggregated = VU.aggregateFrameStatus(validResponses);
+    const classified = VU.classifyStatus(aggregated);
+    const detail = formatStatusDetail(classified, aggregated);
+
+    if (aggregated.ok === false) {
+      setOperationalState(classified.state, classified.label, detail);
       if (fromUser) {
         renderVolume(confirmedVolume);
       }
-      return res;
+      return aggregated;
     }
 
     confirmedVolume = v;
-    const classified = VU.classifyStatus(res);
-    setOperationalState(classified.state, classified.label, classified.detail);
+    setOperationalState(classified.state, classified.label, detail);
 
     // Persist and badge only after content confirmed success
     if (persist) {
       scheduleStorageWrite(tabId, v);
     }
     await updateBadge(tabId, v);
-    return res;
+    return aggregated;
   }
 
   function queueApply(percent) {
@@ -312,9 +376,19 @@
   }
 
   async function probeStatus(tabId) {
-    const result = await sendToTab(tabId, { action: 'getStatus' });
-    if (!result.ok) {
-      if (result.noReceiver) {
+    const frameIds = await getFrameIds(tabId);
+    const results = await broadcastToFrames(tabId, { action: 'getStatus' });
+
+    const topFrameResult = results.find((r) => r.frameId === 0);
+    const validResponses = [];
+    for (const r of results) {
+      if (r.ok && r.response) {
+        validResponses.push(r.response);
+      }
+    }
+
+    if (validResponses.length === 0) {
+      if (topFrameResult && !topFrameResult.ok && topFrameResult.noReceiver) {
         setOperationalState(
           'unavailable',
           'Unavailable on this page',
@@ -326,7 +400,8 @@
       setOperationalState('error', 'Error', 'Failed to query page status.');
       return null;
     }
-    return result.response;
+
+    return VU.aggregateFrameStatus(validResponses);
   }
 
   async function init() {
@@ -404,8 +479,9 @@
 
     if (status) {
       const classified = VU.classifyStatus(status);
+      const detail = formatStatusDetail(classified, status);
       // If only probing and never started, still allow controls; show media hint
-      setOperationalState(classified.state, classified.label, classified.detail);
+      setOperationalState(classified.state, classified.label, detail);
     }
 
     if (!VU.shouldReapplyOnOpen(savedVol, status)) {
@@ -428,3 +504,4 @@
 
   init();
 })();
+

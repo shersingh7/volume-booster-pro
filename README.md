@@ -41,15 +41,17 @@ npm run package   # runtime-only zip at repo root
 
 ```
 Popup (UI)
-  → chrome.tabs.sendMessage
-Content script (top frame, lazy)
+  → chrome.webNavigation.getAllFrames (discover frames)
+  → chrome.tabs.sendMessage (broadcast to all frames)
+Content scripts (all frames, independent audio graphs)
   → Web Audio API GainNode → destination
 ```
 
-1. Content script registers a message listener only at load.
-2. On first `setVolume`, it creates an `AudioContext`, hooks existing media once, and starts a `MutationObserver` for added nodes only.
-3. At 100% (normal), discovery work is stopped when safe; already-routed elements keep their graph so playback stays correct.
-4. Suspended contexts install temporary gesture listeners until `resume()` succeeds.
+1. Content script tracks media elements via `MutationObserver` from page load (`all_frames: true`).
+2. Popup enumerates all frames via `chrome.webNavigation.getAllFrames` and broadcasts volume changes and status queries.
+3. On first `setVolume`, each frame with media lazily creates its own `AudioContext` and hooks its media elements.
+4. Popup aggregates status across all frames (summing media counts and reporting tab-wide audio state).
+5. Suspended contexts install temporary gesture listeners until `resume()` succeeds.
 
 ### Architecture limits (honest)
 
@@ -60,7 +62,7 @@ Content script (top frame, lazy)
 | Cross-origin media without CORS | `createMediaElementSource` may fail; status reports limited control |
 | Restricted pages (`chrome://`, Web Store, …) | Popup shows **Unavailable**; controls disabled |
 | Autoplay / suspended `AudioContext` | May need a **click on the page** first |
-| Iframes | Top frame only (avoids multi-graph / multi-observer cost) |
+| Iframes | Supported across all frames via `all_frames: true` and frame broadcasting |
 
 ## Permissions
 
@@ -68,6 +70,7 @@ Content script (top frame, lazy)
 |---|---|
 | `activeTab` | Identify the active tab for messaging and UI |
 | `storage` | Remember per-tab volume locally |
+| `webNavigation` | Enumerate frames on the active tab for multi-frame media control |
 | `<all_urls>` host permission | Inject the content script on arbitrary sites with media — core product function |
 
 No analytics, remote code, or network calls from the extension UI (local system fonts only).

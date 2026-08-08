@@ -324,6 +324,99 @@
     return '#60a5fa';
   }
 
+  /**
+   * Aggregate per-frame status objects into a single tab-wide status.
+   * @param {Array<Object>} statuses
+   * @returns {Object}
+   */
+  function aggregateFrameStatus(statuses) {
+    const list = Array.isArray(statuses) ? statuses.filter(Boolean) : [];
+    if (list.length === 0) {
+      return {
+        ok: true,
+        started: false,
+        volume: 1.0,
+        contextState: 'none',
+        mediaCount: 0,
+        hookedCount: 0,
+        failedCount: 0,
+        frameCount: 0,
+        code: 'NOT_STARTED',
+        message: null
+      };
+    }
+
+    const valid = list.filter((s) => s.ok !== false);
+    if (valid.length === 0) {
+      // All frames failed
+      const firstFail = list[0] || {};
+      return {
+        ok: false,
+        started: false,
+        volume: 1.0,
+        contextState: 'none',
+        mediaCount: 0,
+        hookedCount: 0,
+        failedCount: 0,
+        frameCount: list.length,
+        code: firstFail.code || 'FRAME_ERROR',
+        message: firstFail.message || 'Failed to query frame status.'
+      };
+    }
+
+    let mediaCount = 0;
+    let hookedCount = 0;
+    let failedCount = 0;
+    let started = false;
+    let volume = 1.0;
+    let code = null;
+    let message = null;
+
+    let hasRunning = false;
+    let hasSuspended = false;
+
+    for (const s of valid) {
+      mediaCount += Number(s.mediaCount) || 0;
+      hookedCount += Number(s.hookedCount) || 0;
+      failedCount += Number(s.failedCount) || 0;
+      if (s.started === true || isControllerStarted(s)) {
+        started = true;
+      }
+      if (s.volume !== undefined && s.volume !== null) {
+        volume = s.volume;
+      }
+      if (s.contextState === 'running') hasRunning = true;
+      else if (s.contextState === 'suspended') hasSuspended = true;
+
+      if (s.code && !code) code = s.code;
+      if (s.message && !message) message = s.message;
+    }
+
+    let contextState = 'none';
+    if (hasRunning) contextState = 'running';
+    else if (hasSuspended) contextState = 'suspended';
+
+    if (!started && contextState === 'none') {
+      code = 'NOT_STARTED';
+      if (mediaCount > 0 && !message) {
+        message = 'Controller not started until volume is set.';
+      }
+    }
+
+    return {
+      ok: true,
+      started,
+      volume,
+      contextState,
+      mediaCount,
+      hookedCount,
+      failedCount,
+      frameCount: list.length,
+      code,
+      message
+    };
+  }
+
   return {
     MIN_PERCENT,
     MAX_PERCENT,
@@ -348,6 +441,8 @@
     classifyStatus,
     isRestrictedUrl,
     formatBadgeText,
-    badgeColorForPercent
+    badgeColorForPercent,
+    aggregateFrameStatus
   };
 });
+
